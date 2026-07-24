@@ -8,7 +8,7 @@ EPG_URLS = [
     "https://epgshare01.online/epgshare01/epg_ripper_AT1.xml.gz",
     "https://epgshare01.online/epgshare01/epg_ripper_CH1.xml.gz",
     "https://epgshare01.online/epgshare01/epg_ripper_FR1.xml.gz",
-    "https://epgshare01.online/epgshare01/epg_ripper_RAKUTEN.xml.gz",
+    "https://epgshare01.online/epgshare01/epg_ripper_RAKUTEN1.xml.gz",
 ]
 
 

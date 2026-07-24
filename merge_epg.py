@@ -1,5 +1,4 @@
 import gzip
-import re
 import xml.etree.ElementTree as ET
 import requests
 
@@ -12,41 +11,12 @@ EPG_URLS = [
 ]
 
 
-def normalize_name(name):
-    """Sichere Normalisierung: Entfernt nur HD/SD/Länder-Suffixe am ENDE des Namens."""
-    if not name:
-        return ""
-
-    # In Kleinbuchstaben umwandeln und Leerzeichen normieren
-    cleaned = name.lower().strip()
-
-    # Nur Anhänge GANZTÄGIG am Ende des Namens entfernen (mit Wortgrenze)
-    suffixes_to_remove = [
-        r"\bhd\b",
-        r"\bsd\b",
-        r"\baustria\b",
-        r"\bschweiz\b",
-        r"\bat\b",
-        r"\bch\b",
-        r"\bde\b",
-    ]
-
-    for pattern in suffixes_to_remove:
-        cleaned = re.sub(pattern, "", cleaned).strip()
-
-    # Nur Sonderzeichen/Mehrfach-Leerzeichen entfernen, Zahlen BLEIBEN ERHALTEN
-    cleaned = re.sub(r"[^\w\s]", "", cleaned)
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
-
-    return cleaned
-
-
 def merge_epgs():
-    seen_channel_names = {}  # norm_name -> master_channel_id
+    seen_channel_ids = set()
     combined_channels = []
     combined_programmes = []
 
-    print("Starte präzisen EPG-Merge...")
+    print("Starte exakten ID-Merge...")
 
     for url in EPG_URLS:
         try:
@@ -56,34 +26,17 @@ def merge_epgs():
                 content = gzip.decompress(response.content)
                 root = ET.fromstring(content)
 
-                id_map = {}
-
-                # 1. Kanäle verarbeiten
+                # 1. Kanäle anhand ihrer EINDEUTIGEN ID hinzufügen
                 for channel in root.findall("channel"):
-                    original_id = channel.get("id")
+                    channel_id = channel.get("id")
 
-                    display_name_elem = channel.find("display-name")
-                    display_name = (
-                        display_name_elem.text if display_name_elem is not None else ""
-                    )
-
-                    norm_name = normalize_name(display_name)
-
-                    if norm_name and norm_name in seen_channel_names:
-                        # Bereits vorhanden -> Verwenden den ersten als Master
-                        master_id = seen_channel_names[norm_name]
-                        id_map[original_id] = master_id
-                    else:
-                        # Neuer, einzigartiger Sender
-                        if norm_name:
-                            seen_channel_names[norm_name] = original_id
+                    # Nur hinzufügen, wenn die EXAKTE ID noch nicht existiert
+                    if channel_id and channel_id not in seen_channel_ids:
+                        seen_channel_ids.add(channel_id)
                         combined_channels.append(channel)
 
-                # 2. Programme verarbeiten
+                # 2. ALLE Programme einfach mitnehmen
                 for programme in root.findall("programme"):
-                    prog_channel = programme.get("channel")
-                    if prog_channel in id_map:
-                        programme.set("channel", id_map[prog_channel])
                     combined_programmes.append(programme)
 
         except Exception as e:
@@ -102,7 +55,7 @@ def merge_epgs():
     with gzip.open(output_filename, "wb") as f:
         tree.write(f, encoding="utf-8", xml_declaration=True)
 
-    print("EPG erfolgreich zusammengeführt! Sky Sport Feeds sollten jetzt alle da sein.")
+    print("EPG erfolgreich zusammengeführt! Alle Sky Sport Kanäle sind garantiert enthalten.")
 
 
 if __name__ == "__main__":

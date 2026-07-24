@@ -1,0 +1,32 @@
+name: Update Combined EPG
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Läuft täglich um 04:00 Uhr UTC
+  workflow_dispatch: # Erlaubt auch manuelles Ausführen per Klick
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Abhängigkeiten installieren
+        run: pip install requests
+
+      - name: EPGz zusammenführen
+        run: python merge_epg.py
+
+      - name: Datei ins Repo committen & pushen
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add epg.xml.gz
+          git commit -m "Auto-update EPG" || exit 0
+          git push
